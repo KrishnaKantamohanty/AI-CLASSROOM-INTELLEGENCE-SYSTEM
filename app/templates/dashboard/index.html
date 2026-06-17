@@ -1,0 +1,376 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — AI Classroom Intelligence{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Real-Time Classroom Intelligence & Analytics{% endblock %}
+
+{% block content %}
+<!-- Top Statistics Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="stat-card stat-card-primary">
+            <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+            <div class="stat-info">
+                <span class="stat-value" data-counter="{{ stats.total_students }}">{{ stats.total_students }}</span>
+                <span class="stat-label">Total Students</span>
+            </div>
+            <div class="stat-trend trend-up"><i class="bi bi-arrow-up-short"></i> Registered</div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="stat-card stat-card-success">
+            <div class="stat-icon"><i class="bi bi-person-check-fill"></i></div>
+            <div class="stat-info">
+                <span class="stat-value" data-counter="{{ stats.present_today }}">{{ stats.present_today }}</span>
+                <span class="stat-label">Present Today</span>
+            </div>
+            <div class="stat-trend trend-up"><i class="bi bi-arrow-up-short"></i> {{ stats.attendance_rate }}%</div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="stat-card stat-card-danger">
+            <div class="stat-icon"><i class="bi bi-person-x-fill"></i></div>
+            <div class="stat-info">
+                <span class="stat-value" data-counter="{{ stats.absent_today }}">{{ stats.absent_today }}</span>
+                <span class="stat-label">Absent Today</span>
+            </div>
+            <div class="stat-trend trend-down"><i class="bi bi-arrow-down-short"></i> Absent</div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="stat-card stat-card-info">
+            <div class="stat-icon"><i class="bi bi-building-fill"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ occupancy.percentage }}%</span>
+                <span class="stat-label">Occupancy</span>
+            </div>
+            <div class="stat-trend trend-neutral"><i class="bi bi-dash"></i> {{ occupancy.present }}/{{ occupancy.capacity }}</div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="stat-card stat-card-warning">
+            <div class="stat-icon"><i class="bi bi-graph-up-arrow"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ rates.monthly }}%</span>
+                <span class="stat-label">Avg Attendance</span>
+            </div>
+            <div class="stat-trend trend-up"><i class="bi bi-arrow-up-short"></i> Monthly</div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="stat-card stat-card-purple">
+            <div class="stat-icon"><i class="bi bi-person-plus-fill"></i></div>
+            <div class="stat-info">
+                <span class="stat-value" data-counter="{{ new_this_month }}">{{ new_this_month }}</span>
+                <span class="stat-label">New This Month</span>
+            </div>
+            <div class="stat-trend trend-up"><i class="bi bi-arrow-up-short"></i> Enrolled</div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Health Score & Engagement Row -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-4 col-md-6">
+        <div class="glass-card h-100">
+            <div class="card-header-custom">
+                <h6><i class="bi bi-heart-pulse-fill me-2"></i>Classroom Health Score</h6>
+            </div>
+            <div class="card-body text-center">
+                <div class="health-score-circle">
+                    <svg viewBox="0 0 120 120" class="score-ring">
+                        <circle cx="60" cy="60" r="54" class="ring-bg"/>
+                        <circle cx="60" cy="60" r="54" class="ring-progress ring-{{ health.color }}"
+                                style="stroke-dasharray: {{ health.score * 3.39 }} 339.292;"/>
+                    </svg>
+                    <div class="score-text">
+                        <span class="score-value">{{ health.score }}</span>
+                        <span class="score-max">/100</span>
+                    </div>
+                </div>
+                <span class="badge bg-{{ health.color }} mt-3 px-3 py-2">{{ health.status }}</span>
+                <div class="score-breakdown mt-3">
+                    <div class="breakdown-item">
+                        <span>Attendance</span>
+                        <div class="progress progress-sm"><div class="progress-bar bg-primary" style="width: {{ health.attendance_component }}%"></div></div>
+                        <span>{{ health.attendance_component }}%</span>
+                    </div>
+                    <div class="breakdown-item">
+                        <span>Consistency</span>
+                        <div class="progress progress-sm"><div class="progress-bar bg-success" style="width: {{ health.consistency_component }}%"></div></div>
+                        <span>{{ health.consistency_component }}%</span>
+                    </div>
+                    <div class="breakdown-item">
+                        <span>Utilization</span>
+                        <div class="progress progress-sm"><div class="progress-bar bg-info" style="width: {{ health.utilization_component }}%"></div></div>
+                        <span>{{ health.utilization_component }}%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-4 col-md-6">
+        <div class="glass-card h-100">
+            <div class="card-header-custom">
+                <h6><i class="bi bi-lightning-charge-fill me-2"></i>Engagement Index</h6>
+            </div>
+            <div class="card-body text-center">
+                <div class="engagement-gauge">
+                    <div class="gauge-value">{{ engagement.score }}%</div>
+                    <div class="gauge-label">{{ engagement.status }}</div>
+                </div>
+                <div class="engagement-metrics mt-3">
+                    <div class="metric-pill">
+                        <i class="bi bi-check-circle-fill text-success"></i>
+                        <span>Consistency: {{ engagement.attendance_consistency }}%</span>
+                    </div>
+                    <div class="metric-pill">
+                        <i class="bi bi-clock-fill text-warning"></i>
+                        <span>Punctuality: {{ engagement.punctuality }}%</span>
+                    </div>
+                    <div class="metric-pill">
+                        <i class="bi bi-star-fill text-info"></i>
+                        <span>Regularity: {{ engagement.regularity }}%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-4">
+        <div class="glass-card h-100">
+            <div class="card-header-custom">
+                <h6><i class="bi bi-broadcast-pin me-2"></i>Real-Time Detection</h6>
+                <span class="badge bg-success pulse-badge">LIVE</span>
+            </div>
+            <div class="card-body">
+                <div class="detection-stats">
+                    <div class="detect-item">
+                        <span class="detect-label">Current Count</span>
+                        <span class="detect-value text-primary" id="liveCount">{{ detection_stats.current_count }}</span>
+                    </div>
+                    <div class="detect-item">
+                        <span class="detect-label">Peak Occupancy</span>
+                        <span class="detect-value text-success">{{ detection_stats.peak_occupancy }}</span>
+                    </div>
+                    <div class="detect-item">
+                        <span class="detect-label">Lowest Today</span>
+                        <span class="detect-value text-warning">{{ detection_stats.lowest_occupancy }}</span>
+                    </div>
+                    <div class="detect-item">
+                        <span class="detect-label">Confidence</span>
+                        <span class="detect-value text-info">{{ detection_stats.average_confidence }}%</span>
+                    </div>
+                </div>
+                <div class="occupancy-bar mt-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <small>Classroom Occupancy</small>
+                        <small id="occupancyPct">{{ occupancy.percentage }}%</small>
+                    </div>
+                    <div class="progress progress-lg">
+                        <div class="progress-bar bg-gradient-primary" id="occupancyBar" role="progressbar"
+                             style="width: {{ occupancy.percentage }}%"></div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-1">
+                        <small class="text-muted">Present: <strong>{{ occupancy.present }}</strong></small>
+                        <small class="text-muted">Capacity: <strong>{{ occupancy.capacity }}</strong></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Attendance Intelligence Row -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="glass-card rate-card">
+            <div class="rate-icon bg-primary-soft"><i class="bi bi-calendar-day"></i></div>
+            <div class="rate-info">
+                <span class="rate-value">{{ rates.daily }}%</span>
+                <span class="rate-label">Daily Rate</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="glass-card rate-card">
+            <div class="rate-icon bg-success-soft"><i class="bi bi-calendar-week"></i></div>
+            <div class="rate-info">
+                <span class="rate-value">{{ rates.weekly }}%</span>
+                <span class="rate-label">Weekly Rate</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="glass-card rate-card">
+            <div class="rate-icon bg-warning-soft"><i class="bi bi-calendar-month"></i></div>
+            <div class="rate-info">
+                <span class="rate-value">{{ rates.monthly }}%</span>
+                <span class="rate-label">Monthly Rate</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="glass-card rate-card">
+            <div class="rate-icon bg-info-soft"><i class="bi bi-calendar-range"></i></div>
+            <div class="rate-info">
+                <span class="rate-value">{{ rates.semester }}%</span>
+                <span class="rate-label">Semester Rate</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-8">
+        <div class="glass-card h-100">
+            <div class="card-header-custom">
+                <h6><i class="bi bi-graph-up me-2"></i>Attendance Trend (Last 30 Days)</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="attendanceTrendChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-4">
+        <div class="glass-card h-100">
+            <div class="card-header-custom">
+                <h6><i class="bi bi-pie-chart-fill me-2"></i>Today's Distribution</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="attendancePieChart" height="260"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Day-wise Chart & Smart Insights Row -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-5">
+        <div class="glass-card h-100">
+            <div class="card-header-custom">
+                <h6><i class="bi bi-bar-chart-fill me-2"></i>Day-wise Attendance</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="dayWiseChart" height="280"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-7">
+        <div class="glass-card h-100">
+            <div class="card-header-custom">
+                <h6><i class="bi bi-stars me-2"></i>Smart AI Insights</h6>
+                <span class="badge bg-purple">AI Powered</span>
+            </div>
+            <div class="card-body">
+                <div class="insights-list">
+                    {% for insight in insights %}
+                    <div class="insight-item insight-{{ insight.severity }}">
+                        <div class="insight-icon">
+                            <i class="bi {{ insight.icon }}"></i>
+                        </div>
+                        <div class="insight-content">
+                            <p>{{ insight.insight_text }}</p>
+                            <span class="insight-time">
+                                <i class="bi bi-clock me-1"></i>{{ insight.generated_at.strftime('%H:%M') }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if not insights %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-lightbulb fs-1"></i>
+                        <p class="mt-2">Insights will appear as data is collected.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- At-Risk Students & Top Students Row -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-7">
+        <div class="glass-card h-100">
+            <div class="card-header-custom">
+                <h6><i class="bi bi-exclamation-triangle-fill me-2 text-warning"></i>Student Risk Detection</h6>
+                <span class="badge bg-danger">{{ at_risk|length }} At Risk</span>
+            </div>
+            <div class="card-body">
+                {% if at_risk %}
+                <div class="table-responsive">
+                    <table class="table table-custom">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Roll No</th>
+                                <th>Attendance</th>
+                                <th>Absences</th>
+                                <th>Risk</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in at_risk[:8] %}
+                            <tr>
+                                <td><strong>{{ s.name }}</strong></td>
+                                <td>{{ s.roll_number }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress progress-sm flex-grow-1">
+                                            <div class="progress-bar bg-{{ 'danger' if s.attendance_pct < 50 else 'warning' }}"
+                                                 style="width: {{ s.attendance_pct }}%"></div>
+                                        </div>
+                                        <span class="small">{{ s.attendance_pct }}%</span>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-danger-soft">{{ s.consecutive_absences }} consecutive</span></td>
+                                <td><span class="badge bg-{{ 'danger' if s.risk_level == 'critical' else 'warning' }}">{{ s.risk_level|upper }}</span></td>
+                                <td><a href="{{ url_for('students.profile', id=s.id) }}" class="btn btn-sm btn-outline-primary">View</a></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-shield-check fs-1 text-success"></i>
+                    <p class="mt-2">All students are maintaining good attendance!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-5">
+        <div class="glass-card h-100">
+            <div class="card-header-custom">
+                <h6><i class="bi bi-trophy-fill me-2 text-warning"></i>Attendance Leaderboard</h6>
+            </div>
+            <div class="card-body">
+                <div class="leaderboard-list">
+                    {% for s in top_students %}
+                    <div class="leaderboard-item">
+                        <div class="rank-badge rank-{{ loop.index }}">{{ loop.index }}</div>
+                        <div class="leader-info">
+                            <strong>{{ s.name }}</strong>
+                            <small class="text-muted">{{ s.department }}</small>
+                        </div>
+                        <div class="leader-score">{{ s.attendance_pct }}%</div>
+                    </div>
+                    {% endfor %}
+                    {% if not top_students %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-trophy fs-1"></i>
+                        <p class="mt-2">Leaderboard will appear with attendance data.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

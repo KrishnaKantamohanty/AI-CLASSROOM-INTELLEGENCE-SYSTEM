@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Reports — AI Classroom Intelligence{% endblock %}
+{% block page_title %}Reports{% endblock %}
+{% block page_subtitle %}Generate and download attendance reports{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    {% for period, icon, desc in [('daily', 'bi-calendar-day', 'Today\'s attendance data'), ('weekly', 'bi-calendar-week', 'Current week attendance'), ('monthly', 'bi-calendar-month', 'Current month attendance'), ('semester', 'bi-calendar-range', 'Last 6 months of data')] %}
+    <div class="col-xl-3 col-md-6">
+        <div class="glass-card text-center h-100">
+            <div class="card-body py-4">
+                <div class="report-icon mb-3">
+                    <i class="bi {{ icon }}"></i>
+                </div>
+                <h5 class="mb-1">{{ period|capitalize }} Report</h5>
+                <p class="text-muted small mb-4">{{ desc }}</p>
+
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('reports.download', format='pdf', period=period) }}" class="btn btn-danger btn-sm">
+                        <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
+                    </a>
+                    <a href="{{ url_for('reports.download', format='excel', period=period) }}" class="btn btn-success btn-sm">
+                        <i class="bi bi-file-earmark-excel me-1"></i>Download Excel
+                    </a>
+                    <a href="{{ url_for('reports.download', format='csv', period=period) }}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-file-earmark-csv me-1"></i>Download CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

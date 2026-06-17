@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Attendance — AI Classroom Intelligence{% endblock %}
+{% block page_title %}Attendance Management{% endblock %}
+{% block page_subtitle %}View and manage daily attendance records{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card stat-card-primary">
+            <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+            <div class="stat-info"><span class="stat-value">{{ stats.total_students }}</span><span class="stat-label">Total</span></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card-success">
+            <div class="stat-icon"><i class="bi bi-person-check-fill"></i></div>
+            <div class="stat-info"><span class="stat-value">{{ stats.present_today }}</span><span class="stat-label">Present</span></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card-danger">
+            <div class="stat-icon"><i class="bi bi-person-x-fill"></i></div>
+            <div class="stat-info"><span class="stat-value">{{ stats.absent_today }}</span><span class="stat-label">Absent</span></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card-info">
+            <div class="stat-icon"><i class="bi bi-percent"></i></div>
+            <div class="stat-info"><span class="stat-value">{{ stats.attendance_rate }}%</span><span class="stat-label">Rate</span></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Image Upload Card -->
+    <div class="col-xl-5">
+        <div class="glass-card h-100">
+            <div class="card-header-custom">
+                <h6><i class="bi bi-camera me-2"></i>Upload Class Photo</h6>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('attendance.upload_image') }}" method="POST" enctype="multipart/form-data" id="uploadForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <p class="text-muted small mb-3">Upload a group photo of the classroom. The AI will detect faces and automatically mark them as present.</p>
+                    
+                    <div class="mb-3">
+                        <input class="form-control" type="file" id="classroomPhoto" name="classroom_photo" accept="image/jpeg, image/png, image/jpg" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100" id="uploadBtn">
+                        <span id="uploadText"><i class="bi bi-robot me-2"></i>Analyze & Mark Attendance</span>
+                        <span id="uploadSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Empty placeholder column to balance the layout -->
+    <div class="col-xl-7">
+        <div class="glass-card h-100 d-flex align-items-center justify-content-center" style="opacity: 0.5;">
+            <div class="text-center text-muted">
+                <i class="bi bi-image fs-1"></i>
+                <p class="mt-2">Upload a photo to see AI detections here.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('uploadForm').addEventListener('submit', function() {
+    const btn = document.getElementById('uploadBtn');
+    const text = document.getElementById('uploadText');
+    const spinner = document.getElementById('uploadSpinner');
+    
+    btn.disabled = true;
+    text.innerHTML = 'Processing Image...';
+    spinner.classList.remove('d-none');
+});
+</script>
+
+<div class="glass-card">
+    <div class="card-header-custom d-flex justify-content-between align-items-center">
+        <h6><i class="bi bi-calendar-check-fill me-2"></i>Attendance Records — {{ selected_date.strftime('%B %d, %Y') }}</h6>
+        <form method="GET" class="d-flex gap-2">
+            <input type="date" class="form-control form-control-sm" name="date" value="{{ selected_date.isoformat() }}">
+            <button class="btn btn-primary btn-sm"><i class="bi bi-search"></i></button>
+        </form>
+    </div>
+    <div class="card-body">
+        {% if records %}
+        <div class="table-responsive">
+            <table class="table table-custom">
+                <thead>
+                    <tr><th>Student</th><th>Roll No</th><th>Status</th><th>Time In</th><th>Method</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                    {% for att, student in records %}
+                    <tr>
+                        <td><strong>{{ student.name }}</strong></td>
+                        <td><code>{{ student.roll_number }}</code></td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if att.status == 'present' else 'warning' if att.status == 'late' else 'danger' }}">
+                                {{ att.status|capitalize }}
+                            </span>
+                        </td>
+                        <td>{{ att.time_in.strftime('%H:%M') if att.time_in else '—' }}</td>
+                        <td><small>{{ att.detected_by }}</small></td>
+                        <td>
+                            <form method="POST" action="{{ url_for('attendance.mark_attendance') }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="student_id" value="{{ student.id }}">
+                                <input type="hidden" name="date" value="{{ selected_date.isoformat() }}">
+                                <div class="btn-group btn-group-sm">
+                                    <button name="status" value="present" class="btn btn-outline-success btn-sm" title="Present"><i class="bi bi-check"></i></button>
+                                    <button name="status" value="late" class="btn btn-outline-warning btn-sm" title="Late"><i class="bi bi-clock"></i></button>
+                                    <button name="status" value="absent" class="btn btn-outline-danger btn-sm" title="Absent"><i class="bi bi-x"></i></button>
+                                </div>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-calendar-x fs-1"></i>
+            <p class="mt-2">No attendance records for this date.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

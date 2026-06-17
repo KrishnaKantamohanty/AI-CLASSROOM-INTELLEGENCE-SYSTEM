@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+eggs/
+*.egg
+
+# Virtual environment
+venv/
+env/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Database
+instance/
+*.db
+
+# AI Models (large files)
+ai_models/*.pt
+ai_models/*.onnx
+
+# Reports output
+data/reports/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

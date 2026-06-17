@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Students — AI Classroom Intelligence{% endblock %}
+{% block page_title %}Student Management{% endblock %}
+{% block page_subtitle %}Add, Edit, Search & Manage Students{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="glass-card">
+            <div class="card-header-custom d-flex justify-content-between align-items-center">
+                <h6><i class="bi bi-people-fill me-2"></i>All Students</h6>
+                <a href="{{ url_for('students.add_student') }}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-lg me-1"></i>Add Student
+                </a>
+            </div>
+            <div class="card-body">
+                <!-- Search & Filter Bar -->
+                <form method="GET" class="row g-3 mb-4">
+                    <div class="col-md-5">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control" name="search" value="{{ search }}"
+                                   placeholder="Search by name, roll number, or email...">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" name="department">
+                            <option value="">All Departments</option>
+                            {% for dept in departments %}
+                            <option value="{{ dept }}" {% if dept == selected_department %}selected{% endif %}>{{ dept }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary w-100" type="submit">
+                            <i class="bi bi-funnel me-1"></i>Filter
+                        </button>
+                    </div>
+                    <div class="col-md-2">
+                        <a href="{{ url_for('students.list_students') }}" class="btn btn-outline-secondary w-100">Clear</a>
+                    </div>
+                </form>
+
+                <!-- Students Table -->
+                <div class="table-responsive">
+                    <table class="table table-custom">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Roll Number</th>
+                                <th>Department</th>
+                                <th>Semester</th>
+                                <th>Attendance</th>
+                                <th>Risk</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in students.items %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        {% if student.photo_path %}
+                                        <div class="avatar-sm" style="overflow: hidden; padding: 0; border: 1px solid var(--border);">
+                                            <img src="{{ url_for('static', filename='uploads/students/' + student.photo_path) }}" alt="{{ student.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                        </div>
+                                        {% else %}
+                                        <div class="avatar-sm">{{ student.name[0] }}</div>
+                                        {% endif %}
+                                        <strong>{{ student.name }}</strong>
+                                    </div>
+                                </td>
+                                <td><code>{{ student.roll_number }}</code></td>
+                                <td>{{ student.department }}</td>
+                                <td>{{ student.semester }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress progress-sm" style="width: 80px;">
+                                            <div class="progress-bar bg-{{ 'success' if student.attendance_percentage >= 75 else 'warning' if student.attendance_percentage >= 50 else 'danger' }}"
+                                                 style="width: {{ student.attendance_percentage }}%"></div>
+                                        </div>
+                                        <small>{{ student.attendance_percentage }}%</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% set risk = student.risk_level %}
+                                    <span class="badge bg-{{ 'success' if risk == 'normal' else 'warning' if risk == 'at_risk' else 'danger' }}">
+                                        {{ risk|replace('_', ' ')|title }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('students.profile', id=student.id) }}" class="btn btn-outline-primary" title="View"><i class="bi bi-eye"></i></a>
+                                        <a href="{{ url_for('students.edit_student', id=student.id) }}" class="btn btn-outline-warning" title="Edit"><i class="bi bi-pencil"></i></a>
+                                        <form method="POST" action="{{ url_for('students.delete_student', id=student.id) }}" class="d-inline"
+                                              onsubmit="return confirm('Remove this student?')">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button class="btn btn-outline-danger btn-sm" title="Delete"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if students.items|length == 0 %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-people fs-1"></i>
+                    <p class="mt-2">No students found.</p>
+                </div>
+                {% endif %}
+
+                <!-- Pagination -->
+                {% if students.pages > 1 %}
+                <nav class="mt-4">
+                    <ul class="pagination pagination-custom justify-content-center">
+                        {% if students.has_prev %}
+                        <li class="page-item"><a class="page-link" href="?page={{ students.prev_num }}&search={{ search }}&department={{ selected_department }}">Prev</a></li>
+                        {% endif %}
+                        {% for p in students.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if p %}
+                        <li class="page-item {% if p == students.page %}active{% endif %}">
+                            <a class="page-link" href="?page={{ p }}&search={{ search }}&department={{ selected_department }}">{{ p }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">…</span></li>
+                        {% endif %}
+                        {% endfor %}
+                        {% if students.has_next %}
+                        <li class="page-item"><a class="page-link" href="?page={{ students.next_num }}&search={{ search }}&department={{ selected_department }}">Next</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

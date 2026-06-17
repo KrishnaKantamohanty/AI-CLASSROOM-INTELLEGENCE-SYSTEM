@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}{{ student.name }} — Profile{% endblock %}
+{% block page_title %}Student Profile{% endblock %}
+{% block page_subtitle %}{{ student.name }} — {{ student.roll_number }}{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Profile Card -->
+    <div class="col-xl-4">
+        <div class="glass-card text-center">
+            <div class="card-body py-4">
+                {% if student.photo_path %}
+                <div class="profile-avatar" style="overflow: hidden; padding: 0;">
+                    <img src="{{ url_for('static', filename='uploads/students/' + student.photo_path) }}" alt="{{ student.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                {% else %}
+                <div class="profile-avatar">{{ student.name[0] }}</div>
+                {% endif %}
+                <h4 class="mt-3">{{ student.name }}</h4>
+                <p class="text-muted">{{ student.roll_number }}</p>
+                <span class="badge bg-{{ 'success' if student.risk_level == 'normal' else 'warning' if student.risk_level == 'at_risk' else 'danger' }} mb-3">
+                    {{ student.risk_level|replace('_',' ')|title }}
+                </span>
+
+                <div class="profile-details mt-3">
+                    <div class="detail-row"><span>Department</span><strong>{{ student.department }}</strong></div>
+                    <div class="detail-row"><span>Semester</span><strong>{{ student.semester }}</strong></div>
+                    <div class="detail-row"><span>Section</span><strong>{{ student.section }}</strong></div>
+                    <div class="detail-row"><span>Gender</span><strong>{{ student.gender }}</strong></div>
+                    {% if student.email %}<div class="detail-row"><span>Email</span><strong>{{ student.email }}</strong></div>{% endif %}
+                    {% if student.phone %}<div class="detail-row"><span>Phone</span><strong>{{ student.phone }}</strong></div>{% endif %}
+                    {% if student.guardian_name %}<div class="detail-row"><span>Guardian</span><strong>{{ student.guardian_name }}</strong></div>{% endif %}
+                </div>
+
+                <div class="mt-4">
+                    <a href="{{ url_for('students.edit_student', id=student.id) }}" class="btn btn-primary btn-sm"><i class="bi bi-pencil me-1"></i>Edit</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attendance Stats -->
+    <div class="col-xl-8">
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="glass-card text-center p-4">
+                    <h2 class="text-primary mb-1">{{ student.attendance_percentage }}%</h2>
+                    <small class="text-muted">Overall Attendance</small>
+                    <div class="progress progress-sm mt-2">
+                        <div class="progress-bar bg-{{ 'success' if student.attendance_percentage >= 75 else 'warning' if student.attendance_percentage >= 50 else 'danger' }}"
+                             style="width: {{ student.attendance_percentage }}%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="glass-card text-center p-4">
+                    <h2 class="text-{{ 'success' if prediction.probability < 30 else 'warning' if prediction.probability < 60 else 'danger' }} mb-1">{{ prediction.probability }}%</h2>
+                    <small class="text-muted">Absence Probability</small>
+                    <div class="mt-2"><span class="badge bg-info">Trend: {{ prediction.trend }}</span></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="glass-card text-center p-4">
+                    <h2 class="mb-1">{{ student.attendance_records.count() }}</h2>
+                    <small class="text-muted">Total Records</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Attendance -->
+        <div class="glass-card mt-4">
+            <div class="card-header-custom">
+                <h6><i class="bi bi-calendar-check me-2"></i>Recent Attendance</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-custom">
+                        <thead>
+                            <tr><th>Date</th><th>Status</th><th>Time In</th><th>Method</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for record in recent_records %}
+                            <tr>
+                                <td>{{ record.date.strftime('%b %d, %Y') }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if record.status == 'present' else 'warning' if record.status == 'late' else 'danger' }}">
+                                        {{ record.status|capitalize }}
+                                    </span>
+                                </td>
+                                <td>{{ record.time_in.strftime('%H:%M') if record.time_in else '—' }}</td>
+                                <td><small class="text-muted">{{ record.detected_by }}</small></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

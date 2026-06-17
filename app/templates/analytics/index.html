@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Analytics — AI Classroom Intelligence{% endblock %}
+{% block page_title %}Advanced Analytics{% endblock %}
+{% block page_subtitle %}AI-Powered Predictions, Health Scores & Deep Insights{% endblock %}
+
+{% block content %}
+<!-- Health & Engagement Row -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-6">
+        <div class="glass-card h-100">
+            <div class="card-header-custom">
+                <h6><i class="bi bi-heart-pulse-fill me-2"></i>Classroom Health Score</h6>
+            </div>
+            <div class="card-body text-center">
+                <div class="health-score-circle large">
+                    <svg viewBox="0 0 120 120" class="score-ring">
+                        <circle cx="60" cy="60" r="54" class="ring-bg"/>
+                        <circle cx="60" cy="60" r="54" class="ring-progress ring-{{ health.color }}"
+                                style="stroke-dasharray: {{ health.score * 3.39 }} 339.292;"/>
+                    </svg>
+                    <div class="score-text">
+                        <span class="score-value">{{ health.score }}</span>
+                        <span class="score-max">/100</span>
+                    </div>
+                </div>
+                <span class="badge bg-{{ health.color }} mt-3 px-4 py-2 fs-6">{{ health.status }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-6">
+        <div class="glass-card h-100">
+            <div class="card-header-custom">
+                <h6><i class="bi bi-lightning-charge-fill me-2"></i>Engagement Index</h6>
+            </div>
+            <div class="card-body text-center">
+                <div class="engagement-gauge large">
+                    <div class="gauge-value display-4">{{ engagement.score }}%</div>
+                    <div class="gauge-label h5">{{ engagement.status }}</div>
+                </div>
+                <div class="row mt-4 text-center">
+                    <div class="col-4">
+                        <h4 class="text-success">{{ engagement.attendance_consistency }}%</h4>
+                        <small class="text-muted">Consistency</small>
+                    </div>
+                    <div class="col-4">
+                        <h4 class="text-warning">{{ engagement.punctuality }}%</h4>
+                        <small class="text-muted">Punctuality</small>
+                    </div>
+                    <div class="col-4">
+                        <h4 class="text-info">{{ engagement.regularity }}%</h4>
+                        <small class="text-muted">Regularity</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Prediction Chart -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="glass-card">
+            <div class="card-header-custom">
+                <h6><i class="bi bi-graph-up-arrow me-2"></i>AI Attendance Prediction (Next 30 Days)</h6>
+                <span class="badge bg-purple">ML Powered</span>
+            </div>
+            <div class="card-body">
+                <canvas id="predictionChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- At-Risk & Leaderboard -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-7">
+        <div class="glass-card h-100">
+            <div class="card-header-custom">
+                <h6><i class="bi bi-exclamation-triangle-fill me-2 text-warning"></i>Students Needing Attention</h6>
+            </div>
+            <div class="card-body">
+                {% if at_risk %}
+                <div class="table-responsive">
+                    <table class="table table-custom">
+                        <thead><tr><th>Student</th><th>Department</th><th>Attendance</th><th>Risk</th><th>Recommendation</th></tr></thead>
+                        <tbody>
+                            {% for s in at_risk %}
+                            <tr>
+                                <td><strong>{{ s.name }}</strong><br><small class="text-muted">{{ s.roll_number }}</small></td>
+                                <td>{{ s.department }}</td>
+                                <td>{{ s.attendance_pct }}%</td>
+                                <td><span class="badge bg-{{ 'danger' if s.risk_level == 'critical' else 'warning' }}">{{ s.risk_level|upper }}</span></td>
+                                <td><small>{{ s.recommendation }}</small></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-shield-check fs-1 text-success"></i>
+                    <p>No at-risk students detected.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-5">
+        <div class="glass-card h-100">
+            <div class="card-header-custom">
+                <h6><i class="bi bi-trophy-fill me-2 text-warning"></i>Top 10 Attendance Leaderboard</h6>
+            </div>
+            <div class="card-body">
+                <div class="leaderboard-list">
+                    {% for s in top_students %}
+                    <div class="leaderboard-item">
+                        <div class="rank-badge rank-{{ loop.index }}">{{ loop.index }}</div>
+                        <div class="leader-info">
+                            <strong>{{ s.name }}</strong>
+                            <small class="text-muted">{{ s.department }}</small>
+                        </div>
+                        <div class="leader-score">{{ s.attendance_pct }}%</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Prediction chart
+const predData = {{ predictions|tojson }};
+const predCtx = document.getElementById('predictionChart');
+if (predCtx && predData) {
+    new Chart(predCtx.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: predData.labels,
+            datasets: [{
+                label: 'Predicted Attendance %',
+                data: predData.predicted_rates,
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 2,
+                borderWidth: 2
+            }, {
+                label: 'Upper Confidence',
+                data: predData.confidence_upper,
+                borderColor: 'rgba(16, 185, 129, 0.4)',
+                backgroundColor: 'transparent',
+                borderDash: [5, 5],
+                pointRadius: 0,
+                borderWidth: 1
+            }, {
+                label: 'Lower Confidence',
+                data: predData.confidence_lower,
+                borderColor: 'rgba(239, 68, 68, 0.4)',
+                backgroundColor: 'transparent',
+                borderDash: [5, 5],
+                pointRadius: 0,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: '#94a3b8' } } },
+            scales: {
+                y: { min: 0, max: 100, grid: { color: 'rgba(148, 163, 184, 0.1)' }, ticks: { color: '#94a3b8' } },
+                x: { grid: { color: 'rgba(148, 163, 184, 0.05)' }, ticks: { color: '#94a3b8', maxTicksLimit: 10 } }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

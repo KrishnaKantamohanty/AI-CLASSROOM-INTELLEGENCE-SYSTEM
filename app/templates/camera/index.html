@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+{% block title %}QR Attendance Session — AI Classroom Intelligence{% endblock %}
+{% block page_title %}QR Attendance{% endblock %}
+{% block page_subtitle %}Generate a QR code for students to scan and check in{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card stat-card-success">
+            <div class="stat-icon"><i class="bi bi-person-check-fill"></i></div>
+            <div class="stat-info">
+                <span class="stat-value" id="sessionCount">0</span>
+                <span class="stat-label">This Session</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card-primary">
+            <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+            <div class="stat-info">
+                <span class="stat-value" id="totalToday">0</span>
+                <span class="stat-label">Checked In Today</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card-warning">
+            <div class="stat-icon"><i class="bi bi-clock-fill"></i></div>
+            <div class="stat-info">
+                <span class="stat-value" id="timeRemaining">--:--</span>
+                <span class="stat-label">Time Remaining</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card-info">
+            <div class="stat-icon"><i class="bi bi-people"></i></div>
+            <div class="stat-info">
+                <span class="stat-value" id="totalStudents">—</span>
+                <span class="stat-label">Total Students</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- QR Display Area -->
+    <div class="col-xl-8">
+        <div class="glass-card">
+            <div class="card-header-custom">
+                <h6><i class="bi bi-qr-code me-2"></i>Attendance QR Code</h6>
+                <span class="badge bg-secondary" id="statusBadge">NO ACTIVE SESSION</span>
+            </div>
+            <div class="card-body">
+                <!-- Generate Form (shown when no active session) -->
+                <div id="generateSection" style="text-align:center; padding: 2rem 0;">
+                    <div style="font-size: 4rem; color: var(--text-muted); margin-bottom: 1rem;">
+                        <i class="bi bi-qr-code-scan"></i>
+                    </div>
+                    <h5 class="mb-2">Start an Attendance Session</h5>
+                    <p class="text-muted mb-4">Generate a QR code that students can scan with their phones to mark attendance.</p>
+
+                    <div class="row justify-content-center g-3 mb-4">
+                        <div class="col-auto">
+                            <label class="form-label" style="font-size:0.8rem; font-weight:600;">Duration (minutes)</label>
+                            <select class="form-select" id="durationSelect" style="width: 140px;">
+                                <option value="3">3 min</option>
+                                <option value="5" selected>5 min</option>
+                                <option value="10">10 min</option>
+                                <option value="15">15 min</option>
+                                <option value="20">20 min</option>
+                                <option value="30">30 min</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <label class="form-label" style="font-size:0.8rem; font-weight:600;">Description (optional)</label>
+                            <input type="text" class="form-control" id="descInput" placeholder="e.g. CS101 Morning" style="width: 220px;">
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary btn-lg px-5" id="generateBtn" onclick="generateSession()">
+                        <i class="bi bi-qr-code me-2"></i>Generate QR Session
+                    </button>
+                </div>
+
+                <!-- Active QR Display (shown when session is active) -->
+                <div id="qrSection" style="display:none; text-align:center; padding: 1.5rem 0;">
+                    <canvas id="qrCanvas"></canvas>
+                    <p class="text-muted mt-3 mb-1" style="font-size: 0.85rem;">
+                        <i class="bi bi-phone me-1"></i>Students: scan this QR code with your phone camera
+                    </p>
+                    <p class="text-muted mb-3" style="font-size: 0.75rem;" id="checkinUrlDisplay"></p>
+
+                    <div class="d-flex justify-content-center gap-2">
+                        <button class="btn btn-outline-primary btn-sm" onclick="enterFullscreen()">
+                            <i class="bi bi-arrows-fullscreen me-1"></i>Fullscreen
+                        </button>
+                        <button class="btn btn-outline-warning btn-sm" onclick="regenerateSession()">
+                            <i class="bi bi-arrow-repeat me-1"></i>New Session
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="stopSession()">
+                            <i class="bi bi-stop-circle me-1"></i>Stop
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Fullscreen Overlay -->
+                <div id="fullscreenOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:#0a0a1a; z-index:9999; cursor:pointer; justify-content:center; align-items:center; flex-direction:column;" onclick="exitFullscreen()">
+                    <canvas id="qrCanvasFS"></canvas>
+                    <p style="color:#94a3b8; margin-top:1.5rem; font-size:1.1rem; font-family:'Inter',sans-serif;">
+                        <i class="bi bi-phone me-1"></i>Scan with your phone to check in
+                    </p>
+                    <p style="color:#64748b; font-size:0.85rem; font-family:'Inter',sans-serif;" id="fsTimer">Expires in --:--</p>
+                    <p style="color:#475569; margin-top:2rem; font-size:0.75rem; font-family:'Inter',sans-serif;">
+                        Click anywhere to exit fullscreen
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Check-in Log -->
+    <div class="col-xl-4">
+        <div class="glass-card h-100">
+            <div class="card-header-custom">
+                <h6><i class="bi bi-list-check me-2"></i>Live Check-ins</h6>
+            </div>
+            <div class="card-body">
+                <div class="detection-log" id="checkinLog">
+                    <div class="log-entry text-muted text-center py-3">
+                        <i class="bi bi-hourglass-split"></i> Waiting for check-ins...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+<script>
+let currentToken = null;
+let currentUrl = null;
+let expiresAt = null;
+let pollInterval = null;
+let timerInterval = null;
+let seenCheckins = new Set();
+
+// Check if there's already an active session from server
+{% if active_session and active_session.is_valid %}
+    currentToken = "{{ active_session.token }}";
+    currentUrl = "http://{{ server_ip }}:5000/checkin/{{ active_session.token }}";
+    expiresAt = new Date("{{ active_session.expires_at.isoformat() }}Z");
+    showQR(currentUrl);
+    startPolling();
+    startTimer();
+{% endif %}
+
+async function generateSession() {
+    const btn = document.getElementById('generateBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+
+    const duration = document.getElementById('durationSelect').value;
+    const description = document.getElementById('descInput').value;
+
+    try {
+        const formData = new FormData();
+        formData.append('duration', duration);
+        formData.append('description', description);
+
+        const res = await fetch('/camera/generate', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCSRFToken() },
+            body: formData
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            currentToken = data.token;
+            currentUrl = data.checkin_url;
+            expiresAt = new Date(data.expires_at + 'Z');
+            seenCheckins.clear();
+            document.getElementById('checkinLog').innerHTML =
+                '<div class="log-entry text-muted text-center py-3"><i class="bi bi-hourglass-split"></i> Waiting for check-ins...</div>';
+
+            showQR(currentUrl);
+            startPolling();
+            startTimer();
+        }
+    } catch (e) {
+        console.error('Failed to generate session:', e);
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-qr-code me-2"></i>Generate QR Session';
+}
+
+function showQR(url) {
+    document.getElementById('generateSection').style.display = 'none';
+    document.getElementById('qrSection').style.display = 'block';
+    document.getElementById('statusBadge').textContent = 'SESSION ACTIVE';
+    document.getElementById('statusBadge').className = 'badge bg-success pulse-badge';
+    document.getElementById('checkinUrlDisplay').textContent = url;
+
+    // Main QR
+    new QRious({
+        element: document.getElementById('qrCanvas'),
+        value: url,
+        size: 320,
+        level: 'H',
+        background: 'white',
+        foreground: '#1e1b4b'
+    });
+
+    // Fullscreen QR
+    new QRious({
+        element: document.getElementById('qrCanvasFS'),
+        value: url,
+        size: 420,
+        level: 'H',
+        background: 'white',
+        foreground: '#1e1b4b'
+    });
+}
+
+function startPolling() {
+    if (pollInterval) clearInterval(pollInterval);
+    pollInterval = setInterval(pollStatus, 2000);
+    pollStatus();
+}
+
+async function pollStatus() {
+    try {
+        const res = await fetch('/camera/session-status');
+        const data = await res.json();
+
+        document.getElementById('totalStudents').textContent = data.total_students || '—';
+
+        if (!data.active) {
+            if (data.expired) sessionExpired();
+            return;
+        }
+
+        document.getElementById('sessionCount').textContent = data.session_count;
+        document.getElementById('totalToday').textContent = data.total_today;
+
+        // Add new check-ins to the log
+        if (data.checkins && data.checkins.length > 0) {
+            const log = document.getElementById('checkinLog');
+            for (const c of data.checkins.reverse()) {
+                const key = c.roll_number + c.time;
+                if (seenCheckins.has(key)) continue;
+                seenCheckins.add(key);
+
+                if (log.querySelector('.text-muted')) log.innerHTML = '';
+
+                const entry = document.createElement('div');
+                entry.className = 'log-entry';
+                entry.style.animation = 'fadeIn 0.4s ease';
+                entry.innerHTML = `
+                    <span class="log-time">${c.time}</span>
+                    <span class="log-text">
+                        <strong>${c.student_name}</strong>
+                        <small class="text-muted">(${c.roll_number})</small>
+                        <span class="badge bg-success ms-1">Present</span>
+                    </span>
+                `;
+                log.prepend(entry);
+                if (log.children.length > 30) log.lastChild.remove();
+            }
+        }
+    } catch (e) { console.error('Poll error:', e); }
+}
+
+function startTimer() {
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(updateTimer, 1000);
+    updateTimer();
+}
+
+function updateTimer() {
+    if (!expiresAt) return;
+    const now = new Date();
+    const diff = Math.max(0, Math.floor((expiresAt - now) / 1000));
+    const m = Math.floor(diff / 60);
+    const s = diff % 60;
+    const display = `${m}:${String(s).padStart(2, '0')}`;
+
+    document.getElementById('timeRemaining').textContent = display;
+    document.getElementById('fsTimer').textContent = `Expires in ${display}`;
+
+    if (diff <= 0) sessionExpired();
+}
+
+function sessionExpired() {
+    if (pollInterval) clearInterval(pollInterval);
+    if (timerInterval) clearInterval(timerInterval);
+
+    document.getElementById('qrSection').style.display = 'none';
+    document.getElementById('generateSection').style.display = 'block';
+    document.getElementById('statusBadge').textContent = 'SESSION EXPIRED';
+    document.getElementById('statusBadge').className = 'badge bg-danger';
+    document.getElementById('timeRemaining').textContent = '0:00';
+    exitFullscreen();
+
+    currentToken = null;
+    currentUrl = null;
+    expiresAt = null;
+}
+
+function regenerateSession() {
+    sessionExpired();
+    generateSession();
+}
+
+async function stopSession() {
+    try {
+        await fetch('/camera/stop', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCSRFToken() }
+        });
+    } catch (e) {}
+    sessionExpired();
+}
+
+function enterFullscreen() {
+    const overlay = document.getElementById('fullscreenOverlay');
+    overlay.style.display = 'flex';
+}
+
+function exitFullscreen() {
+    document.getElementById('fullscreenOverlay').style.display = 'none';
+}
+
+function getCSRFToken() {
+    const meta = document.querySelector('meta[name=csrf-token]');
+    if (meta) return meta.content;
+    // Fallback: try cookie
+    const match = document.cookie.match(/csrf_token=([^;]+)/);
+    return match ? match[1] : '';
+}
+
+// Escape key exits fullscreen
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') exitFullscreen();
+});
+</script>
+
+<style>
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#qrCanvas, #qrCanvasFS {
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+#fullscreenOverlay canvas {
+    border-radius: 1.5rem;
+    box-shadow: 0 20px 60px rgba(99, 102, 241, 0.3);
+}
+</style>
+{% endblock %}
